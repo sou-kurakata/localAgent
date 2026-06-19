@@ -1,0 +1,3 @@
+def is_same_error(prev: str, curr: str) -> bool:
+    """行番号・パス・時刻を除いて正規化し、同一エラーかを判定。"""
+    ...

@@ -1,0 +1,3 @@
+def run_task(task: str, max_iterations: int):
+    """外側ループ。agent.run → pytest判定 → 失敗なら再試行 → 上限で安全停止。"""
+    ...
