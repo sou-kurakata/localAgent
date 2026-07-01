@@ -1,21 +1,14 @@
-from agent import build_agent
+from manager import run_task
 
 
 def main():
     print("起動中...\n")
-    agent = build_agent()
-    prompt = (
-        "あなたはファイルをディスクに書き込む必要があります。"
-        "コメントに書くだけでは保存されません。必ず write_candidate ツールを使ってください。\n"
-        "手順:\n"
-        "1. write_candidate('calc.py', 'def add(a, b):\\n    return a + b\\n') を呼ぶ\n"
-        "2. write_candidate('test_calc.py', テストコード) を呼ぶ\n"
-        "3. run_pytest() を呼ぶ\n"
-        "テストコードは 'from calc import add' で対象をインポートすること。"
+    task = (
+        "数値のリストを受け取り、偶数だけを合計して返す関数 sum_even(numbers) を "
+        "calc.py に作成してください。空リストの場合は 0 を返します。"
+        "それをテストする test_calc.py も作成してください。"
     )
-    result = agent.run(prompt)
-    print("\n【最終結果】")
-    print(result)
+    run_task(task, max_iterations=3)
 
 
 if __name__ == "__main__":
