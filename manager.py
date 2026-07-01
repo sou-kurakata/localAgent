@@ -6,14 +6,17 @@ from tools.filesystem import list_directory
 # 手で調整したプロンプトをテンプレート化して自動生成する。
 def build_prompt(task: str, attempt: int, last_feedback: str = "") -> str:
     base = (
-        "あなたはローカルのコーディングエージェントです。\n"
-        "重要: コードはコメントに書くのではなく、必ず write_candidate ツールで"
-        "ディスクに保存してください。\n\n"
+        "あなたはローカルのコーディングエージェントです。\n\n"
         f"# タスク\n{task}\n\n"
-        "# 制約\n"
-        "- ファイルは write_candidate(filename, content) で _agent_output に保存する\n"
-        "- テストは 'from <対象モジュール> import ...' でインポートする\n"
-        "- 最後に必ず run_pytest() を呼び、結果を確認する\n"
+        "# 必ずこの順序で実行すること\n"
+        "1. write_candidate('calc.py', <実装コードの文字列>) を呼ぶ\n"
+        "2. write_candidate('test_calc.py', <テストコードの文字列>) を呼ぶ\n"
+        "   - テストコードの中では 'from calc import ...' を使ってよい\n"
+        "   - これはあくまで保存する文字列であり、今すぐ実行はされない\n"
+        "3. run_pytest() を呼ぶ\n"
+        "# 重要\n"
+        "- 上記1〜3以外のコード（import文の実行や関数呼び出し）は書かないこと\n"
+        "- 各ステップは write_candidate または run_pytest の呼び出しだけにする\n"
     )
     if last_feedback:
         base += (
