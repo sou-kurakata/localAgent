@@ -8,13 +8,23 @@ def build_prompt(task: str, attempt: int, last_feedback: str = "") -> str:
     base = (
         "あなたはローカルのコーディングエージェントです。\n\n"
         f"# タスク\n{task}\n\n"
+        "# 作業ディレクトリ\n"
+        "list_directory() が見せるファイルが、あなたが読める/書ける/テストできる全てです。\n"
+        "（read_file・write_candidate・run_pytest は同じ場所を見ています）\n\n"
         "# 使えるツール\n"
-        "- write_candidate(<ファイル名>, <コード文字列>): ファイルを保存する\n"
+        "- list_directory(): 作業ディレクトリのファイル一覧を返す\n"
+        "- read_file(<ファイル名>): 既存ファイルの中身を読む（修正前に必ず対象を読むこと）\n"
+        "- write_candidate(<ファイル名>, <コード文字列>): ファイルを保存する（上書き可）\n"
         "- run_pytest(): 保存済みのテストを実行し、結果を返す\n\n"
+        "# 進め方\n"
+        "1. list_directory() で今あるファイルを確認する\n"
+        "2. 既存の実装・テストがあれば read_file() で中身を読む\n"
+        "3. 必要な修正/実装を write_candidate() で保存する（既存テストは上書きしない）\n"
+        "4. run_pytest() が全て通るまで 2〜3 を繰り返す\n\n"
         "# ゴール\n"
-        "タスクを実装し、それを検証するテストを書き、run_pytest() で全て通ることを確認せよ。\n"
-        "テストは実装ファイルから import すること。\n"
-        "全て通ったら完了。\n"
+        "run_pytest() で全テストが通れば完了。\n"
+        "テストがまだ無い場合のみ、実装を検証するテストを書く（実装ファイルから import すること）。\n"
+        "run_pytest() が PASSED になったら、それ以上ツールを呼ばず final_answer("done") で直ちに終了せよ。\n"
     )
     if last_feedback:
         base += (

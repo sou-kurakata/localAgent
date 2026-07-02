@@ -3,7 +3,7 @@ from pathlib import Path
 from manager import run_task
 
 DEFAULT_TASK = (
-    "西暦の年を受け取り、うるう年ならTrue、そうでなければFalseを返す関数を作ってください。それをテストするコードも書いてください。"
+    "buggy_math.py にバグがあります。テストが通るように修正してください"
 )
 
 def main():
