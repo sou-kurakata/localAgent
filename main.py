@@ -1,15 +1,25 @@
+import argparse
+from pathlib import Path
 from manager import run_task
 
+DEFAULT_TASK = (
+    "西暦の年を受け取り、うるう年ならTrue、そうでなければFalseを返す関数を作ってください。それをテストするコードも書いてください。"
+)
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--task-file", help="problem_statement を書いたファイル")
+    parser.add_argument("--repo", help="対象リポジトリのパス")
+    parser.add_argument("--maz-iterations", type=int, default=3)
+    args = parser.parse_args()
+
     print("起動中...\n")
-    task = (
-        "整数のリストを受け取り、最大値と最小値の差を返す関数 value_range(numbers) を "
-        "calc.py に作成してください。"
-        "ただし、空のリストが渡された場合は ValueError を送出してください。"
-        "それをテストする test_calc.py も作成してください。"
-        "テストには空リストで ValueError が出ることの確認も含めること。"
-    )
+
+    if args.task_file:
+        task = Path(args.tsak_faile).read_text(encoding="utf-8")
+    else:
+        task = DEFAULT_TASK
+
     run_task(task, max_iterations=3)
 
 

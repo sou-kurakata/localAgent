@@ -8,15 +8,13 @@ def build_prompt(task: str, attempt: int, last_feedback: str = "") -> str:
     base = (
         "あなたはローカルのコーディングエージェントです。\n\n"
         f"# タスク\n{task}\n\n"
-        "# 必ずこの順序で実行すること\n"
-        "1. write_candidate('calc.py', <実装コードの文字列>) を呼ぶ\n"
-        "2. write_candidate('test_calc.py', <テストコードの文字列>) を呼ぶ\n"
-        "   - テストコードの中では 'from calc import ...' を使ってよい\n"
-        "   - これはあくまで保存する文字列であり、今すぐ実行はされない\n"
-        "3. run_pytest() を呼ぶ\n"
-        "# 重要\n"
-        "- 上記1〜3以外のコード（import文の実行や関数呼び出し）は書かないこと\n"
-        "- 各ステップは write_candidate または run_pytest の呼び出しだけにする\n"
+        "# 使えるツール\n"
+        "- write_candidate(<ファイル名>, <コード文字列>): ファイルを保存する\n"
+        "- run_pytest(): 保存済みのテストを実行し、結果を返す\n\n"
+        "# ゴール\n"
+        "タスクを実装し、それを検証するテストを書き、run_pytest() で全て通ることを確認せよ。\n"
+        "テストは実装ファイルから import すること。\n"
+        "全て通ったら完了。\n"
     )
     if last_feedback:
         base += (
