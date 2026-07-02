@@ -51,6 +51,10 @@ def write_candidate(filename: str, content: str) -> str:
     target = (SAFE_DIR / filename).resolve()
     if SAFE_DIR.resolve() not in target.parents:
         return "[Error] SAFE_DIR の外には書き込めません。"
+    
+    # バグ修正タスクではテストは不可侵。実装をテストに合わせて歪める自作自演を防ぐ
+    if filename.startswith("test_"):
+        return "[Error] テストファイルは書き換えられません（テストは source of truth です）。"
 
     # ④ 書き込み（UTF-8固定。M1の run_pytest と文字コードを揃える）
     try:

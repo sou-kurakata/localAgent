@@ -39,11 +39,6 @@ def build_prompt(task: str, attempt: int, last_feedback: str = "") -> str:
 def is_passed(pytest_output: str) -> bool:
     return "STATUS: PASSED" in pytest_output
 
-def promote_files():
-    """M5① で実装予定。緑になった _agent_output/ の成果を workspace リポジトリへコピーする橋渡し。"""
-    pass  # 今は何もしない。commit_all が空を返すのが正常。
-
-
 def run_task(task, workspace, task_slug, max_iterations=5):
     # ① 隔離ブランチ作成＆checkout（失敗したらループに入る前に止める）
     try:
@@ -72,7 +67,6 @@ def run_task(task, workspace, task_slug, max_iterations=5):
 
             if is_passed(result):
                 print(f"\n✅ 試行 {attempt} で成功しました。")
-                promote_files()   # ← M5① で実装。今は下記の空スタブでOK
                 sha = commit_all(workspace, f"agent: {task_slug} passed (attempt {attempt})")
                 if sha:
                     print(f"   隔離ブランチにコミット: {sha[:8]}")

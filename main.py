@@ -24,7 +24,7 @@ def main():
     else:
         task = DEFAULT_TASK
 
-    run_task(task, Path(args.workspace), args.task_slug,
+    run_task(task, WORKSPACE_DIR, args.task_slug,
              max_iterations=args.max_iterations)
 
 if __name__ == "__main__":
