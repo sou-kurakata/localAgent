@@ -1,5 +1,6 @@
 from agent import build_agent
 from tools.filesystem import list_directory
+from watcher import LoopWatcher
 
 
 # タスクの「意図」だけ受け取り、7Bが迷わない構造化プロンプトに整形する。
@@ -24,7 +25,7 @@ def build_prompt(task: str, attempt: int, last_feedback: str = "") -> str:
         "# ゴール\n"
         "run_pytest() で全テストが通れば完了。\n"
         "テストがまだ無い場合のみ、実装を検証するテストを書く（実装ファイルから import すること）。\n"
-        "run_pytest() が PASSED になったら、それ以上ツールを呼ばず final_answer("done") で直ちに終了せよ。\n"
+        "run_pytest() が PASSED になったら、それ以上ツールを呼ばず final_answer('done') で直ちに終了せよ。\n"
     )
     if last_feedback:
         base += (
@@ -39,8 +40,9 @@ def is_passed(pytest_output: str) -> bool:
     return "STATUS: PASSED" in pytest_output
 
 
-def run_task(task: str, max_iterations: int = 3) -> bool:
+def run_task(task: str, max_iterations: int = 5) -> bool:
     print(f"=== タスク開始: {task} ===\n")
+    watcher = LoopWatcher(abort_after=2)
     last_feedback = ""
 
     for attempt in range(1, max_iterations + 1):
@@ -62,6 +64,11 @@ def run_task(task: str, max_iterations: int = 3) -> bool:
         if is_passed(result):
             print(f"\n✅ 試行 {attempt} で成功しました。")
             return True
+    
+        action = watcher.record(result)
+        if action == "abort":
+            print("\n⛔ 停滞検知(同一エラー連続)により安全停止します。")
+            return False
 
         last_feedback = result   # 失敗結果を次の試行へフィードバック
 
