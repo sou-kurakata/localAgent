@@ -1,7 +1,7 @@
 from agent import build_agent
 from tools.filesystem import list_directory
 from watcher import LoopWatcher
-
+from git_guard import start_isolation, commit_all, finish_isolation, GitError
 
 # タスクの「意図」だけ受け取り、7Bが迷わない構造化プロンプトに整形する。
 # 手で調整したプロンプトをテンプレート化して自動生成する。
@@ -39,38 +39,54 @@ def build_prompt(task: str, attempt: int, last_feedback: str = "") -> str:
 def is_passed(pytest_output: str) -> bool:
     return "STATUS: PASSED" in pytest_output
 
+def promote_files():
+    """M5① で実装予定。緑になった _agent_output/ の成果を workspace リポジトリへコピーする橋渡し。"""
+    pass  # 今は何もしない。commit_all が空を返すのが正常。
 
-def run_task(task: str, max_iterations: int = 5) -> bool:
-    print(f"=== タスク開始: {task} ===\n")
-    watcher = LoopWatcher(abort_after=2)
-    last_feedback = ""
 
-    for attempt in range(1, max_iterations + 1):
-        print(f"\n----- 試行 {attempt}/{max_iterations} -----")
+def run_task(task, workspace, task_slug, max_iterations=5):
+    # ① 隔離ブランチ作成＆checkout（失敗したらループに入る前に止める）
+    try:
+        state = start_isolation(workspace, task_slug)
+    except GitError as e:
+        print(f"⛔ 隔離開始に失敗: {e}")
+        return False
 
-        # 毎回エージェントを作り直す = コンテキストをリセットし、
-        # 前回の20,000トークン肥大やループ状態を持ち越さない。
-        agent = build_agent(max_steps=3)   # ← 短く区切る。10分ステップ対策
-        prompt = build_prompt(task, attempt, last_feedback)
+    # state が確定した後だけ finally が動くよう、ここから別の try で包む
+    try:
+        print(f"=== タスク開始: {task} ===\n")
+        watcher = LoopWatcher(abort_after=2)
+        last_feedback = ""
 
-        agent.run(prompt)
+        for attempt in range(1, max_iterations + 1):
+            print(f"\n----- 試行 {attempt}/{max_iterations} -----")
 
-        # Manager 自身が pytest を直接実行して「真実」を確認する。
-        # エージェントの自己申告（"All tests passed"）は信用しない。
-        from tools.testing import run_pytest
-        result = run_pytest()
-        print(result)
+            agent = build_agent(max_steps=3)   # 毎回作り直してコンテキストをリセット
+            prompt = build_prompt(task, attempt, last_feedback)
+            agent.run(prompt)
 
-        if is_passed(result):
-            print(f"\n✅ 試行 {attempt} で成功しました。")
-            return True
-    
-        action = watcher.record(result)
-        if action == "abort":
-            print("\n⛔ 停滞検知(同一エラー連続)により安全停止します。")
-            return False
+            # Manager 自身が pytest を実行して「真実」を確認（自己申告は信用しない）
+            from tools.testing import run_pytest
+            result = run_pytest()
+            print(result)
 
-        last_feedback = result   # 失敗結果を次の試行へフィードバック
+            if is_passed(result):
+                print(f"\n✅ 試行 {attempt} で成功しました。")
+                promote_files()   # ← M5① で実装。今は下記の空スタブでOK
+                sha = commit_all(workspace, f"agent: {task_slug} passed (attempt {attempt})")
+                if sha:
+                    print(f"   隔離ブランチにコミット: {sha[:8]}")
+                return True
 
-    print(f"\n⛔ {max_iterations} 回試行しましたが成功しませんでした。安全停止します。")
-    return False
+            action = watcher.record(result)
+            if action == "abort":
+                print("\n⛔ 停滞検知(同一エラー連続)により安全停止します。")
+                return False
+
+            last_feedback = result   # 失敗結果を次の試行へフィードバック
+
+        print(f"\n⛔ {max_iterations} 回試行しましたが成功しませんでした。安全停止します。")
+        return False
+    finally:
+        # ③ 成功・失敗・例外、どの経路でも必ず元ブランチへ戻す
+        finish_isolation(workspace, state["base"])

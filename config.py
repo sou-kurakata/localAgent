@@ -16,3 +16,4 @@ MODEL = LiteLLMModel(
 PROJECT_ROOT = Path.cwd()
 SAFE_DIR = PROJECT_ROOT / "_agent_output"  # シャドーイング出力先（M2で使用）
 MAX_ITERATIONS = 5                         # 外側ループ上限（M3で使用）
+WORKSPACE_DIR = PROJECT_ROOT.parent / "workspace" # 昇格用

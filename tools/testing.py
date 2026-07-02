@@ -20,9 +20,6 @@ _MAX_OUTPUT = 4000  # LLMへ返す最大文字数。num_ctx節約のため
 @tool
 def run_pytest() -> str:
     """SAFE_DIR 内で pytest を実行し、結果を返す。
-
-    Args:
-        target: SAFE_DIR からの相対パス。省略時は SAFE_DIR 全体を対象にする。
     """
     if not SAFE_DIR.is_dir():
         return f"[Error] 出力ディレクトリが存在しません: {SAFE_DIR}"
