@@ -1,0 +1,92 @@
+# M5③ コンテナ封じ込め（A案・同居構成）
+#
+# 4保証の実装マップ:
+#   ① インターネット遮断   → agent は internal ネットワーク (isolated) のみに接続。外へのゲートウェイ無し。
+#   ② ホストFS遮断         → agent は /workspace の bind マウントだけ。他は一切マウントしない。
+#   ③ 認証情報なし          → 渡すのは GIT_* の「氏名/メール（=身元）」のみ。トークン/鍵/クラウド認証は無し。
+#   ④ 最小権限              → 非root(uid1000) / cap_drop ALL / no-new-privileges / read_only ルートFS + tmpfs。
+#
+# 島の境界は「agent が触るネットワーク」で決まる。ollama が egress を持っても、
+# agent は isolated だけなので外に出られない（ollama は汎用プロキシではないので抜け道にならない）。
+
+services:
+  # ========================================================================
+  # Ollama: モデルサーバー。agent と同じ島(isolated)で待ち受ける。
+  # モデル pull のためだけ egress を持つ（下の「モデル pull の注意」参照）。
+  # ========================================================================
+  ollama:
+    image: ollama/ollama:latest        # 再現性重視なら :0.x.x でピン留め推奨
+    volumes:
+      - ollama-models:/root/.ollama    # pull したモデルはここに永続化（初回のみ pull）
+    networks:
+      - isolated                       # agent との通信路（内部・外に出ない）
+      - egress                         # モデル pull 用の外向き。paranoia 運用では下でコメントアウト可
+    healthcheck:
+      test: ["CMD", "ollama", "list"]  # サーバーが起動してAPIが応答するかを確認
+      interval: 10s
+      timeout: 5s
+      retries: 12                      # CPU起動が遅い環境向けに余裕を持たせる
+    restart: unless-stopped
+
+    # --- GPU（本番同居サーバー用）: NVIDIA Container Toolkit を入れて下の3行を有効化 ---
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # ========================================================================
+  # Agent: エージェント本体。untrusted な生成コードを走らせる側。ここを固く縛る。
+  # ========================================================================
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      ollama:
+        condition: service_healthy     # ollama が応答してから起動
+    environment:
+      # config.py が読む env（ホスト既定を上書き）
+      OLLAMA_BASE_URL: "http://ollama:11434"   # 島の中の DNS 名で ollama を指す
+      AGENT_WORKSPACE: "/workspace"          # SAFE_DIR/WORKSPACE_DIR = /workspace になる
+      # git のコミット身元（= 認証情報ではない。push はしない/できない）
+      GIT_AUTHOR_NAME: "Local Agent"
+      GIT_AUTHOR_EMAIL: "agent@localhost"
+      GIT_COMMITTER_NAME: "Local Agent"
+      GIT_COMMITTER_EMAIL: "agent@localhost"
+
+    volumes:
+      # ② 唯一のマウント。ホストの実ワークスペースリポ(git初期化済み)を /workspace に rw で渡す。
+      #    Windows は forward slash 表記が安全。
+      #    .env で WORKSPACE_HOST を設定すれば上書き可（下の .env.example 参照）。
+      - "${WORKSPACE_HOST:-C:/Users/your-name/dev/workspace}:/workspace:rw"
+
+    networks:
+      - isolated                       # ①③: agent は島のみ。egress には繋がない。
+
+    # --- ④ 最小権限 ---------------------------------------------------------
+    read_only: true                    # ルートFSは読取専用
+    tmpfs:
+      - /tmp                           # 書き込みが要る所は tmpfs へ（HF_HOME/XDG_CACHE_HOME も /tmp 配下）
+    cap_drop:
+      - ALL                            # Linux capability を全部剥奪
+    security_opt:
+      - "no-new-privileges:true"       # setuid 等での権限昇格を封じる
+    user: "1000:1000"                  # Dockerfile の agent と一致（念のため明示）
+
+    restart: "no"                      # バッチジョブ。落ちても勝手に再起動させない
+
+networks:
+  # 内部ネットワーク: 外向きゲートウェイ無し。コンテナ間 DNS/通信は可能、インターネットは不可。
+  isolated:
+    internal: true
+  # 外向きブリッジ: モデル pull のため ollama にだけ付ける。
+  # 完全島(ollamaも外に出さない)にしたい場合は、この egress を消し、
+  #   ollama の networks から egress を外し、pull は一時的な別手段で行う（下記参照）。
+  egress:
+    driver: bridge
+
+volumes:
+  ollama-models:

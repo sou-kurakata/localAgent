@@ -1,12 +1,17 @@
+import os
 from pathlib import Path
 from smolagents import LiteLLMModel
+
+# コンテナでもホストでも同じコードで動くよう env で上書き可能にする。
+# 未設定ならホスト実行の既定にフォールバック。
+OLLAMA_BASE = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 
 # ローカルLLM (Ollama) 接続設定
 # "ollama_chat/" を付けると LiteLLM が Ollama のネイティブ /api/chat を使い、
 # チャットテンプレートが正しく当たり num_ctx も渡せる（OpenAI互換エンドポイントは経由しない）
 MODEL = LiteLLMModel(
     model_id="ollama_chat/qwen2.5-coder:7b",
-    api_base="http://localhost:11434",
+    api_base=OLLAMA_BASE,
     num_ctx=32768,
     temperature=0.2,
     # api_key は ollama provider では不要（付けても無害）
@@ -14,6 +19,8 @@ MODEL = LiteLLMModel(
 
 # プロジェクト共通の定数
 PROJECT_ROOT = Path.cwd()
-SAFE_DIR = PROJECT_ROOT.parent / "workspace"  # シャドーイング出力先（M2で使用）
-MAX_ITERATIONS = 5                         # 外側ループ上限（M3で使用）
 WORKSPACE_DIR = PROJECT_ROOT.parent / "workspace" # 昇格用
+# 生成(write_candidate)・検証(run_pytest)・git捕捉(git_guard) は全て同一ルートを見る。
+SAFE_DIR = WORKSPACE_DIR
+ 
+MAX_ITERATIONS = 5   # 外側ループ上限
