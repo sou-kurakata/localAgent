@@ -1,3 +1,4 @@
 venv/
 _agent_output/
 __pycache__/
+.env
