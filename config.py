@@ -19,7 +19,11 @@ MODEL = LiteLLMModel(
 
 # プロジェクト共通の定数
 PROJECT_ROOT = Path.cwd()
-WORKSPACE_DIR = PROJECT_ROOT.parent / "workspace" # 昇格用
+# 作業先のリポジトリ。ここ 1 か所でだけ決める。
+# AGENT_WORKSPACE が未設定なら、このリポジトリと同じ階層の workspace/ を使う。
+WORKSPACE_DIR = Path(
+    os.environ.get("AGENT_WORKSPACE") or PROJECT_ROOT.parent / "workspace"
+).resolve()
 # 生成(write_candidate)・検証(run_pytest)・git捕捉(git_guard) は全て同一ルートを見る。
 SAFE_DIR = WORKSPACE_DIR
  

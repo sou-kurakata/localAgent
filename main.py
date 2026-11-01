@@ -10,8 +10,8 @@ DEFAULT_TASK = (
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--task-file", help="problem_statement を書いたファイル")
-    parser.add_argument("--workspace", default=str(WORKSPACE_DIR),
-                        help="gitで隔離する昇格先リポジトリのパス")
+    # 作業先は config.py（環境変数 AGENT_WORKSPACE）で決める。
+    # ツールと git_guard が別の場所を見ないよう、ここでは受け取らない。
     parser.add_argument("--task-slug", default="default-task",
                         help="隔離ブランチ名に使う短いタスク識別子")
     parser.add_argument("--max-iterations", type=int, default=3)
